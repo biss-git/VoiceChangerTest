@@ -9,10 +9,13 @@
     mc:Ignorable="d"
         Title="MainWindow" Height="499.684" Width="879.495" Closing="MetroWindow_Closing">
     <Grid>
-        <Button Content="マイクの取得" FontSize="16" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="38,28,0,0" Height="44" Width="256"
+        <Button Content="マイク・スピーカー の更新" FontSize="16" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="38,28,0,0" Height="44" Width="256"
                 Click="GetDeviceButton_Click" />
         <ComboBox HorizontalAlignment="Left" VerticalAlignment="Top" Margin="38,77,0,0" Width="256" BorderBrush="{x:Null}"
-                ItemsSource="{Binding deviceList}" SelectedIndex="{Binding deviceNumber}"/>
+                ItemsSource="{Binding inputDeviceList}" SelectedIndex="{Binding inputDeviceNumber}"/>
+        <CheckBox Name="checkBox1" Content="出力先を選択する" IsChecked="{Binding outputIsSelectable}" FontSize="18" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="47,109,0,0"/>
+        <ComboBox HorizontalAlignment="Left" VerticalAlignment="Top" Margin="38,135,0,0" Width="256" BorderBrush="{x:Null}"
+                ItemsSource="{Binding outputDeviceList}" SelectedIndex="{Binding outputDeviceNumber}" IsEnabled="{Binding IsChecked, Source={x:Reference checkBox1}}" />
         <ToggleButton DockPanel.Dock="Left" Margin="344,43,0,0" Width="50" Height="50"
                     Style="{StaticResource MaterialDesignActionToggleButton}"
                     ToolTip="MaterialDesignActionLightToggleButton" Click="RecordingButton_Click" 
@@ -32,9 +35,9 @@
                 </Rectangle>
             </materialDesign:ToggleButtonAssist.OnContent>
         </ToggleButton>
-        <Label Content="ピッチ倍率" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="38,132,0,0" FontSize="18" RenderTransformOrigin="0.512,0.353"/>
-        <Controls:NumericUpDown Minimum="0.3" Maximum="3" Interval="0.1" Value="{Binding prate}" StringFormat="{}{0:N2}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="167,132,0,0" Width="127" FontSize="18" />
-        <Label Content="フォルマント" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="38,171,0,0" FontSize="18" RenderTransformOrigin="0.512,0.353"/>
-        <Controls:NumericUpDown Minimum="0.3" Maximum="3" Interval="0.1" Value="{Binding srate}" StringFormat="{}{0:N2}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="167,171,0,0" Width="127" FontSize="18" />
+        <Label Content="ピッチ倍率" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="38,168,0,0" FontSize="18" RenderTransformOrigin="0.512,0.353"/>
+        <Controls:NumericUpDown Minimum="0.3" Maximum="3" Interval="0.05" Value="{Binding prate}" StringFormat="{}{0:N2}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="167,168,0,0" Width="127" FontSize="18" />
+        <Label Content="フォルマント" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="38,207,0,0" FontSize="18" RenderTransformOrigin="0.512,0.353"/>
+        <Controls:NumericUpDown Minimum="0.3" Maximum="3" Interval="0.05" Value="{Binding srate}" StringFormat="{}{0:N2}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="167,207,0,0" Width="127" FontSize="18" />
     </Grid>
 </Controls:MetroWindow>

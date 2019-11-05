@@ -27,15 +27,19 @@ namespace VoiceChangerTest
     {
 
         public bool play { get; set; }
-        public List<string> deviceList { get; set; }
-        public int deviceNumber { get; set; }
+        public List<string> inputDeviceList { get; set; }
+        public List<string> outputDeviceList { get; set; }
+        public int inputDeviceNumber { get; set; }
+        public int outputDeviceNumber { get; set; }
+        public bool outputIsSelectable { get; set; } = false;
         public float prate { get; set; } = 1.8f;
         public double srate { get; set; } = 1.3;
 
         public MainWindow()
         {
             InitializeComponent();
-            GetDevice();
+            GetInputDevice();
+            GetOutputDevice();
             WorldConfig.D4C_threshold = 0;
             WorldConfig.f0_floor = 60;
             WorldConfig.f0_ceil = 600;
@@ -50,18 +54,29 @@ namespace VoiceChangerTest
 
         private void GetDeviceButton_Click(object sender, RoutedEventArgs e)
         {
-            GetDevice();
+            GetInputDevice();
+            GetOutputDevice();
         }
 
-        private void GetDevice()
+        private void GetInputDevice()
         {
-            deviceList = new List<string>();
+            List<string> deviceList = new List<string>();
             for (int i = 0; i < WaveIn.DeviceCount; i++)
             {
-                var cap = WaveIn.GetCapabilities(i);
-                deviceList.Add(cap.ProductName);
+                var capabilities = WaveIn.GetCapabilities(i);
+                deviceList.Add(capabilities.ProductName);
             }
-            deviceNumber = 0;
+            inputDeviceList = deviceList;
+        }
+        private void GetOutputDevice()
+        {
+            List<string> deviceList = new List<string>();
+            for (int i = 0; i < WaveOut.DeviceCount; i++)
+            {
+                var capabilities = WaveOut.GetCapabilities(i);
+                deviceList.Add(capabilities.ProductName);
+            }
+            outputDeviceList = deviceList;
         }
 
         private void RecordingButton_Click(object sender, RoutedEventArgs e)
@@ -87,16 +102,17 @@ namespace VoiceChangerTest
 
         private void StartRecording()
         {
-            if (WaveIn.DeviceCount == 0) { return; }
 
             buffer = new ConcurrentQueue<WP[]>();
 
             // マイク側の準備
             string filePath_In = Path.Combine(Environment.CurrentDirectory, "マイク.wav");
             waveWriter_In = new WaveFileWriter(filePath_In, waveFormat);
-            waveIn = new WaveInEvent();
-            waveIn.DeviceNumber = deviceNumber;
-            waveIn.WaveFormat = waveFormat; // WaveIn.GetCapabilities(deviceNumber).Channels
+            waveIn = new WaveInEvent()
+            {
+                DeviceNumber = inputDeviceNumber,
+                WaveFormat = waveFormat,
+            };
             waveIn.DataAvailable += ReceiveVoice;
             waveIn.RecordingStopped += async (_, __) =>
             {
@@ -107,12 +123,21 @@ namespace VoiceChangerTest
             // スピーカ側の準備
             string filePath_Out = Path.Combine(Environment.CurrentDirectory, "スピーカ.wav");
             waveWriter_Out = new WaveFileWriter(filePath_Out, waveFormat);
-            MMDevice mmDevice = new MMDeviceEnumerator()
-                .GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);  //再生デバイスと出力先を設定
             BufferedWaveProvider provider = new BufferedWaveProvider(new WaveFormat(WorldConfig.fs, 16, 1)); //16bit１チャンネルの音源を想定
-            VolumeWaveProvider16 wavProvider = new VolumeWaveProvider16(provider) { Volume=1f};  //ボリューム調整をするために上のBufferedWaveProviderをデコレータっぽく包む
-            wavPlayer = new WasapiOut(mmDevice, AudioClientShareMode.Shared, false, 200);
-            wavPlayer.Init(wavProvider); //出力に入力を接続して再生開始
+            if (outputIsSelectable)
+            {
+                wavPlayer = new WaveOut()
+                {
+                    DeviceNumber = outputDeviceNumber,
+                };
+            }
+            else
+            {
+                MMDevice mmDevice = new MMDeviceEnumerator()
+                    .GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);  //再生デバイスと出力先を設定
+                wavPlayer = new WasapiOut(mmDevice, AudioClientShareMode.Shared, false, 100);
+            }
+            wavPlayer.Init(provider);
             wavPlayer.Play();
             Task t = SendVoice(provider);
         }
@@ -142,6 +167,7 @@ namespace VoiceChangerTest
                 float[] signal = ByteToFloat(ee.Buffer);
 
                 converter.SignalToParameter.AddSignal(signal);
+                converter.SignalToParameter.Analyze();    // この行はコメントアウトできます。
                 wp = converter.SignalToParameter.ReadParameter();
 
                 for (int i = 0; i < wp.Length; i++)
@@ -160,10 +186,7 @@ namespace VoiceChangerTest
             }
             catch (Exception e)
             {
-                Log("音声分析時に失敗しました。" + e.ToString());
-                Log("[message] \r\n" + e.Message);
-                Log("[source] \r\n" + e.Source);
-                Log("[stacktrace] \r\n" + e.StackTrace);
+                ErrorLog("音声分析時に失敗しました。",e);
             }
         }
 
@@ -177,7 +200,12 @@ namespace VoiceChangerTest
                     {
                         WP[] wp;
                         buffer.TryDequeue(out wp);
+                        if (wp == null)
+                        {
+                            continue;
+                        }
                         converter.ParameterToSignal.AddParameter(wp);
+                        converter.ParameterToSignal.Synthsize();    // この行はコメントアウトできます。
                         float[] Fbuffer = converter.ParameterToSignal.ReadSignal();
                         byte[] Bbuffer = FloatToByte(Fbuffer);
                         provider.AddSamples(Bbuffer, 0, Bbuffer.Length); // バッファーを渡す
@@ -193,10 +221,7 @@ namespace VoiceChangerTest
             }
             catch(Exception e)
             {
-                Log("音声合成時に失敗しました。" + e.ToString());
-                Log("[message] \r\n" + e.Message);
-                Log("[source] \r\n" + e.Source);
-                Log("[stacktrace] \r\n" + e.StackTrace);
+                ErrorLog("音声合成時に失敗しました。", e);
             }
         }
 
@@ -229,7 +254,17 @@ namespace VoiceChangerTest
         }
 
 
-        public void Log(string s)
+        
+        private void ErrorLog(string s, Exception e)
+        {
+            Log(s);
+            Log(e.ToString());
+            Log("[message] \r\n" + e.Message);
+            Log("[source] \r\n" + e.Source);
+            Log("[stacktrace] \r\n" + e.StackTrace);
+        }
+        
+        private void Log(string s)
         {
             try
             {
