@@ -18,40 +18,49 @@ namespace VoiceChangerTest
     public partial class MainWindow : MetroWindow
     {
         #region ビューにバインドされてる変数
+
         /// <summary>
         /// 再生ボタンが押されているかどうか
         /// true:押されている　false:押されていない
         /// </summary>
         public bool play { get; set; }
+
         /// <summary>
         /// マイクのコンボボックスに表示される文字列
         /// </summary>
         public List<string> inputDeviceList { get; set; }
+
         /// <summary>
         /// スピーカーのコンボボックスに表示される文字列
         /// </summary>
         public List<string> outputDeviceList { get; set; }
+
         /// <summary>
         /// マイクのコンボボックスで選択されている番号
         /// </summary>
         public int inputDeviceNumber { get; set; }
+
         /// <summary>
         /// スピーカーのコンボボックスで選択されている番号
         /// </summary>
         public int outputDeviceNumber { get; set; }
+
         /// <summary>
         /// 「出力先を選択する」にチェックがついているがどうか
         /// true:チェックがついている　false:チェックがついていない
         /// </summary>
         public bool outputIsSelectable { get; set; } = false;
+
         /// <summary>
         /// 「ピッチ倍率」の値
         /// </summary>
         public float prate { get; set; } = 2.0f;
+
         /// <summary>
         /// 「フォルマント」の値
         /// </summary>
         public double srate { get; set; } = 1.25;
+
         #endregion
 
         /// <summary>
@@ -70,7 +79,6 @@ namespace VoiceChangerTest
 
         /// <summary>
         /// 画面をとじるときには停止処理もしておく。
-        /// 
         /// </summary>
         private void MetroWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
@@ -99,6 +107,7 @@ namespace VoiceChangerTest
             }
             inputDeviceList = deviceList;
         }
+
         /// <summary>
         /// 出力デバイスの取得
         /// </summary>
@@ -139,35 +148,43 @@ namespace VoiceChangerTest
 
 
         #region プライベートな変数
+
         /// <summary>
         /// マイクからの入力を処理してくれるやつ
         /// </summary>
         WaveInEvent waveIn;
+
         /// <summary>
         /// スピーカーなどの出力の処理をしてくれるやつ
         /// </summary>
         IWavePlayer wavPlayer;
+
         /// <summary>
         /// 音声の分析と合成をしてくれるやつ
         /// </summary>
         WorldConverter converter = new WorldConverter(0.005);
+
         /// <summary>
         /// 音声の分析結果を一時的に保持してくれるキュー（FIFO）
         /// </summary>
         ConcurrentQueue<WP[]> buffer;
+
         /// <summary>
         /// マイクからの入力（未加工の音声）をファイルに保存してくれるやつ
         /// </summary>
         WaveFileWriter waveWriter_In;
+
         /// <summary>
         /// スピーカーへの出力（加工後の音声）をファイルに保存してくれるやつ
         /// </summary>
         WaveFileWriter waveWriter_Out;
+
         /// <summary>
         /// 音声のフォーマット
         /// 44.1kHz, 16bit, 1チャンネル
         /// </summary>
         readonly WaveFormat waveFormat = new WaveFormat(WorldConfig.fs, 16, 1);
+
         #endregion
 
         /// <summary>
@@ -241,7 +258,7 @@ namespace VoiceChangerTest
                 float[] signal = ByteToFloat(ee.Buffer);    // マイクからの音声信号
                 converter.SignalToParameter.AddSignal(signal);
                 converter.SignalToParameter.Analyze();    // 音声信号の分析（この行をコメントアウトしても、同じ処理が次の行のReadParameterで実行されます）
-                WP[] wp = converter.SignalToParameter.ReadParameter();  // 分析結果
+                WP[] wp = converter.SignalToParameter.ReadParameter();  // 分析結果の取得
 
                 // 音声の加工　ピッチとフォルマントの変更
                 for (int i = 0; i < wp.Length; i++)
@@ -267,7 +284,6 @@ namespace VoiceChangerTest
         /// スピーカーへ出力する処理
         /// </summary>
         /// <param name="provider"></param>
-        /// <returns></returns>
         async Task SendVoice(BufferedWaveProvider provider)
         {
             while (play) //再生可能な間ずっとループ処理
@@ -313,6 +329,7 @@ namespace VoiceChangerTest
             }
             return values;
         }
+
         /// <summary>
         /// floatで表現された音を16bitのbyteに直す
         /// </summary>
@@ -343,9 +360,9 @@ namespace VoiceChangerTest
             Log("[source] \r\n" + e.Source);
             Log("[stacktrace] \r\n" + e.StackTrace);
         }
-        
+
         /// <summary>
-        /// ログに書き込む
+        /// ログ（log/日付.txt）に書き込む
         /// </summary>
         /// <param name="s">任意の文字列</param>
         private static void Log(string s)
